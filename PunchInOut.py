@@ -7,6 +7,11 @@ from tkinter import messagebox
 import math
 import re
 
+## remember to somehow make it able to fully run in the background like other background apps.
+
+with open(os.path.dirname(__file__) + '/dayProductivity.txt', 'a') as f:
+    f.write(str(dt.now()) + '\n\n')
+
 root=Tk()
 
 
@@ -29,7 +34,7 @@ topSec.columnconfigure(1,weight=33)
 topSec.columnconfigure(2,weight=33)
 
 isPunchedIn=False
-thisTime = None
+# thisTime = None
 timeData = None
 secondsPassed = 0
 minutesPassed = 0
@@ -53,7 +58,17 @@ def get_exp():
     # Now we make that a dictionary, and then apply dict(sorted(dictionary.items())) then we make a list of all the dictionaries
     # then everytime the user clicks on either one, it takes the index of the list that's clicked and then chooses that one but this time with the explaination, and it also makes sure the ones with no explaination are just empty or with space that get's returned :)
     
-    
+def clearE():
+    global dataL
+    with open(os.path.dirname(__file__) + '/dayProductivity.txt', 'a') as f:
+        for i,j in dataL.items():
+            f.writelines(f'{int(i)/60} minutes on: {j}\n')
+
+    with open(os.path.dirname(__file__) + '/times.txt', 'w') as f:
+        f.write('')
+    lList.delete(0,len(dataL))
+    print(dataL)
+    dataL = {}
 
 def leaderBoard():
     global lList
@@ -67,6 +82,7 @@ def leaderBoard():
     fileInfo = ''
     lList=Listbox(lb,fg="black",font=("Aerial", 14, "bold italic"))
     show_explain = Button(lb, text='Show explaination', command=get_exp)
+    clearDates = Button(lb, text='Clear Day', command=clearE)
     try:
         with open(os.path.dirname(__file__) + '/times.txt', 'r') as f:
             fileInfo = f.read()
@@ -86,6 +102,7 @@ def leaderBoard():
     except:
         messagebox.showerror(title='Not Found', message='Please make sure you have used the timer before :)')
     show_explain.pack()
+    clearDates.pack()
     return fileInfo
 
     lb.mainloop()
@@ -100,22 +117,17 @@ def timer():
 
     secondsPassed+=1
     arr = np.array(list(TimerLable["text"]))
-    if secondsPassed < 60:
-        arr[-2:] = list('0' + str(secondsPassed)) if len(str(secondsPassed)) < 2 else list(str(secondsPassed))
-        TimerLable.config(text=''.join(arr))
-    elif minutesPassed < 60:
-        secondsPassed = 0
-        minutesPassed += 1
-        arr[-2:] = list('0' + str(secondsPassed)) if len(str(secondsPassed)) < 2 else list(str(secondsPassed))
-        arr[-5:-3] = list('0' + str(minutesPassed)) if len(str(minutesPassed)) < 2 else list(str(minutesPassed))
-        TimerLable.config(text=''.join(arr))
-    else:
-        minutesPassed = 0
-        hoursPassed += 1
-        arr[-2:] = list('0' + str(secondsPassed)) if len(str(secondsPassed)) < 2 else list(str(secondsPassed))
-        arr[-5:-3] = list('0' + str(minutesPassed)) if len(str(minutesPassed)) < 2 else list(str(minutesPassed))
-        arr[0:2] = list('0' + str(hoursPassed)) if len(str(hoursPassed)) < 2 else list(str(hoursPassed))
-        TimerLable.config(text=''.join(arr))
+
+    hoursPassed = secondsPassed // 3600
+    minutesPassed = (secondsPassed % 3600) // 60
+    secs = secondsPassed % 60
+
+    arr[-2:] = list(f"{secs:02}")
+
+    arr[-5:-3] = list(f"{minutesPassed:02}")
+
+    arr[0:2] = list(f"{hoursPassed:02}")
+    TimerLable.config(text=''.join(arr))
     timeData = root.after(1000,timer)
 
 
@@ -135,19 +147,21 @@ def punchIn():
             with open(os.path.dirname(__file__)  + '/punchIndate.txt', 'w') as f:
                 f.write(str(dt.now()))
     
-        thisTime = t.time()
+        # thisTime = t.time()
         secondsPassed = 0
         timer()
     elif timePaused == False:
         m = messagebox.askokcancel(title='timer already started!', message='You already have a timer, you sure you want to restart?')
         if m:
-            thisTime = t.time()
+            # thisTime = t.time()
             secondsPassed = 0
             root.after_cancel(timeData)
             timer()
     else:
         #thisTime = t.time()
-        secondsPassed = secondaryTime - 1 
+        # secondsPassed = secondaryTime - 1 
+        secondsPassed-=1
+        timePaused = False
         #there's a problem with pause, when you pause and write a note, it does not clock it, and the other problem is 
         # when you either pause, run and then re run it doesn't re start, or when you re start multiple times an issue happens.
         timer()
@@ -157,10 +171,11 @@ def punchOut():
     isPunchedIn = False
     global explaination
     global secondsPassed
+    global minutesPassed
+    global hoursPassed
+    global thisTime
 
-    preTime = t.time()
-    timeSpent = preTime - thisTime
-    timeSpent = timeSpent - (timeSpent - secondsPassed)
+    timeSpent = ((hoursPassed * 60) * 60) + (minutesPassed * 60) + secondsPassed
 
     try:
         eg = str(explaination.get())
@@ -185,13 +200,15 @@ def pauseTime():
     global timePaused
     global isPunchedIn
     global secondaryTime
+    global hoursPassed
+    global minutesPassed
 
     timePaused = True
 
     if isPunchedIn == False:
         messagebox.showerror(title='YOU HAVE TO START THE TIMER FIRST!')
     else:
-        secondaryTime = secondsPassed
+        # secondaryTime = ((hoursPassed * 60) * 60) + (minutesPassed * 60) + secondsPassed
         root.after_cancel(timeData)
 
 
@@ -230,5 +247,8 @@ print(os.getcwd() + '/punchIndate.txt')
 
 explaination = Entry(bottmSec)
 explaination.grid(row=0,column=1,sticky='nsew')
+
+# I add the budgeting section here
+
 
 root.mainloop()
